@@ -1,16 +1,29 @@
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
+import { StormView } from "~/components/error/arch-window";
+import {
+  ErrorPage,
+  primaryButton,
+  secondaryButton,
+} from "~/components/error/error-page";
+import { NotFoundPage } from "~/components/error/not-found-page";
+import { OWNER } from "~/components/owner";
 import type { Route } from "./+types/root";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
+  { rel: "icon", href: "/favicon.ico", sizes: "32x32" },
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -19,7 +32,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..700&display=swap",
   },
 ];
 
@@ -45,31 +58,56 @@ export default function App() {
   return <Outlet />;
 }
 
+// Anything thrown while loading or rendering a page lands here. Unknown URLs normally reach the
+// catch-all route instead, but a loader can still throw a 404, so that gets the same page.
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
+  const { pathname, search } = useLocation();
 
-  if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+  if (isRouteErrorResponse(error) && error.status === 404) {
+    return (
+      <>
+        <title>{`Page not found · ${OWNER.name}`}</title>
+        <NotFoundPage />
+      </>
+    );
   }
 
+  const status = isRouteErrorResponse(error) ? error.status : 500;
+  // Only show the underlying message and stack in development; in production they may leak internals.
+  const devError =
+    import.meta.env.DEV && error instanceof Error ? error : undefined;
+
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
+    <>
+      <title>{`Something went wrong · ${OWNER.name}`}</title>
+      <ErrorPage
+        scene={<StormView />}
+        status={status}
+        heading="Something broke on my side."
+        description="This page hit an error while loading. It isn't anything you did. Try again in a moment, or head back to the homepage."
+        actions={
+          <>
+            {/* A full reload, so it works even if the error stopped the app from hydrating. */}
+            <a href={pathname + search} className={primaryButton}>
+              Try again
+            </a>
+            <Link to="/" className={secondaryButton}>
+              Go to the homepage
+            </Link>
+          </>
+        }
+      >
+        {devError && (
+          <details className="glass w-full max-w-3xl rounded-2xl p-4 text-left">
+            <summary className="cursor-pointer font-semibold">
+              {devError.message}
+            </summary>
+            <pre className="mt-3 overflow-x-auto font-mono text-xs leading-relaxed">
+              <code>{devError.stack}</code>
+            </pre>
+          </details>
+        )}
+      </ErrorPage>
+    </>
   );
 }

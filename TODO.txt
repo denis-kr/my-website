@@ -1,0 +1,18 @@
+Home page basically this https://www.aaabadcode.com/
+
+--> should i use some external libraries for diffirent stuff?
+-->performance?
+--> deployment???
+--> AI chat that will give info about me
+--> make sure the contact form is working perfectly
+--> SEO
+--> animations???
+--> localization???
+
+--> responsive design
+
+-->check if there is any code not used and remove it
+
+--> double check all of the code...
+--> use context7 to make sure nothing is deprecated/???
+--> tbd
